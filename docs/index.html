@@ -453,5 +453,74 @@
 	<!-- Start of bodyEnd -->
     
     <!-- End of bodyEnd -->
+
+	<script id="doh3-framer-strip-images">
+	(function () {
+		var main = document.getElementById("main");
+		if (!main) return;
+
+		function stripInlinePhotoBackgrounds(root) {
+			root.querySelectorAll("[style]").forEach(function (el) {
+				var st = el.getAttribute("style") || "";
+				if (!/url\(\s*["']?https?:/i.test(st)) return;
+				el.setAttribute(
+					"style",
+					st.replace(/url\(\s*["']?https?:[^)]+\)/gi, "none")
+				);
+				el.style.setProperty("background-color", "#d1d5db", "important");
+			});
+		}
+
+		function stripComputedPhotoBackgrounds(root) {
+			root.querySelectorAll("*").forEach(function (el) {
+				if (el.tagName === "IMG" || el.closest("svg")) return;
+				var bi;
+				try {
+					bi = getComputedStyle(el).backgroundImage;
+				} catch (e) {
+					return;
+				}
+				if (!bi || bi === "none") return;
+				if (bi.indexOf("data:") !== -1) return;
+				if (bi.indexOf("http://") === -1 && bi.indexOf("https://") === -1) return;
+				el.style.setProperty("background-image", "none", "important");
+				el.style.setProperty("background-color", "#d1d5db", "important");
+			});
+		}
+
+		function swapImgs(root) {
+			root.querySelectorAll("img").forEach(function (img) {
+				if (img.closest("svg")) return;
+				var ph = document.createElement("div");
+				ph.className = "doh3-image-placeholder";
+				ph.setAttribute("aria-label", "Image placeholder");
+				img.replaceWith(ph);
+			});
+		}
+
+		function run() {
+			swapImgs(main);
+			stripInlinePhotoBackgrounds(main);
+			stripComputedPhotoBackgrounds(main);
+		}
+
+		var moScheduled = false;
+		function scheduleRun() {
+			if (moScheduled) return;
+			moScheduled = true;
+			requestAnimationFrame(function () {
+				moScheduled = false;
+				run();
+			});
+		}
+		run();
+		if (typeof MutationObserver !== "undefined") {
+			new MutationObserver(scheduleRun).observe(main, { subtree: true, childList: true });
+		}
+		[0, 200, 600, 1200, 2500, 5000, 9000].forEach(function (ms) {
+			setTimeout(run, ms);
+		});
+	})();
+	</script>
 </body>
 </html>
